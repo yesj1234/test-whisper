@@ -34,34 +34,6 @@ class SampleSpeech(datasets.GeneratorBasedBuilder):
                     "filepath": os.path.join(self.data_dir, "game_refined.tsv"),
                     "split": "game"
                 }
-            ),
-            datasets.SplitGenerator(
-                name="travel",
-                gen_kwargs={
-                    "filepath": os.path.join(self.data_dir, "travel_refined.tsv"),
-                    "split": "travel"
-                }
-            ),
-            datasets.SplitGenerator(
-                name="food",
-                gen_kwargs={
-                    "filepath": os.path.join(self.data_dir, "food_refined.tsv"),
-                    "split": "food"
-                }
-            ),
-            datasets.SplitGenerator(
-                name="communication",
-                gen_kwargs={
-                    "filepath": os.path.join(self.data_dir, "communication_refined.tsv"),
-                    "split": "communication"
-                }
-            ),
-            datasets.SplitGenerator(
-                name="fashion",
-                gen_kwargs={
-                    "filepath": os.path.join(self.data_dir, "fashion_refined.tsv"),
-                    "split": "fashion"
-                }
             )
         ]    
     def _generate_examples(self, filepath, split): 

@@ -28,5 +28,5 @@ if __name__ == "__main__":
         category = file.split("/")[-1].split(".")[0].split("_")[0]
         with open(file, mode="r", encoding="utf-8") as t:
             lines = t.readlines()
-            lines = list(map(lambda x: x.split(":")[0], lines))[-4:]
+            lines = list(map(lambda x: x.split(":")[0], lines))[-1:]
         main(args, category=category, content_idxs=lines)
