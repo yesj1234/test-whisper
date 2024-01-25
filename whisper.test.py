@@ -2,7 +2,18 @@ from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from datasets import load_dataset 
 import torch
 import evaluate 
-import re 
+import re
+from tqdm import tqdm
+import logging
+import sys
+logger = logging.getLogger("WhisperLogger")
+logging.basicConfig(
+    level=logging.INFO,
+    format = "%(asctime)s|%(levelname)s|%(message)s",
+    datefmt="%d/%b/%Y %H:%M:%S",
+    stream= sys.stdout
+)
+
 # LANGUAGES: en(english), zh(chinese), ko(korean), ja(japanese) 
 
 
@@ -24,7 +35,7 @@ class MyWhisper:
         if not audio_arraies:
             raise ValueError("audio arraies are empty")
         predictions = []
-        for array in audio_arraies:
+        for array in tqdm(audio_arraies, desc="Running Prediction"):
             input_features = self.processor(array, sampling_rate = 16_000, return_tensors="pt").input_features.to(self.device)
             prediction = self.predict_transcription(input_features)
             predictions.append(prediction)
@@ -66,11 +77,12 @@ if __name__ == "__main__":
     predictions = list(map(post_processing, predictions))
     transcriptions = list(map(post_processing, transcriptions))
     # 4. load the metric to compute 
-    metric = evaluate.load(args.metric) 
-    with open(f"./{args.dataset_name}scores.txt", mode="w", encoding="utf-8") as f:
+    metric = evaluate.load(args.metric)
+
+    with open(f"./{args.dataset_name.replace('/', '_')}scores.txt", mode="w", encoding="utf-8") as f:
         for ref, pred in zip(transcriptions, predictions):
             try:
-                score = metric.compute(predictions = [pred], references=[ref])
+                score = metric.compute(predictions=[pred], references=[ref])
                 f.write(f"{pred} :: {ref} :: {round(score, 2)}\n")
             except Exception as e:
                 print(e)
