@@ -60,15 +60,15 @@ if __name__ == "__main__":
     # 2. load the dataset
     ds = load_dataset(args.dataset_name, "en_us", split="train", trust_remote_code=True)
     logger.info(ds.info.description)
-    transcriptions = []
-    audio_arraies = []    
+    transcriptions=[]
+    audio_arraies=[]    
 
     for sample in ds:
         transcriptions.append(sample["transcription"])
         audio_arraies.append(sample["audio"]["array"])
 
     # 3. generate predictions and make some post processing. 
-    predictions = whisperer.main(transcriptions = transcriptions, audio_arraies = audio_arraies)
+    predictions = whisperer.main(transcriptions=transcriptions, audio_arraies=audio_arraies)
     def post_processing(x):
         x = re.sub("[.,?!']", "", x)
         x = x.lower()
@@ -98,4 +98,4 @@ if __name__ == "__main__":
             score = float(score[:-2])
             total += score
         logger.info(f"average score: {total / int(len(lines))}")
-        h.write(f"{args.model}|{args.dataset_name}|{total/int(len(lines))}  ")
+        h.write(f"{args.model} | {args.dataset_name} | {total/int(len(lines))}\n")
