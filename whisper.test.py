@@ -25,7 +25,7 @@ class MyWhisper:
             raise ValueError("audio arraies are empty")
         predictions = []
         for array in audio_arraies:
-            input_features = self.processor(array, sampling_rate = 16_000, return_tensor="pt").input_features().to(self.device)
+            input_features = self.processor(array, sampling_rate = 16_000, return_tensors="pt").input_features.to(self.device)
             prediction = self.predict_transcription(input_features)
             predictions.append(prediction)
         return predictions
@@ -43,24 +43,18 @@ if __name__ == "__main__":
     # 1. get the model and processor and initialize MyWhisper 
     processor = WhisperProcessor.from_pretrained(args.model)
     model = WhisperForConditionalGeneration.from_pretrained(args.model)
-    model.config.forced_decoder_ids = WhisperProcessor.get_decoder_prompt_ids(language=args.language, task="transcribe")
+    model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(language=args.language, task="transcribe")
     whisperer = MyWhisper(processor=processor, model=model)
     
-    # 2. load the dataset in streaming mode since we don't need the whole dataset. 
-    ds = load_dataset(args.dataset_name, "en_us", split="train", streaming="true", trust_remote_code=True)
+    # 2. load the dataset
+    ds = load_dataset(args.dataset_name, "en_us", split="train", trust_remote_code=True)
     transcriptions = []
     audio_arraies = []    
-    count = 0
-    for cur in iter(ds):
-        count += 1
-        try:
-            transcriptions.append(cur['transcription'])
-            audio_arraies.append(cur["audio"]["array"])
-        except Exception as e:
-            print(e)
-        if count > 100:
-            break 
-    
+
+    for sample in ds:
+        transcriptions.append(sample["transcription"])
+        audio_arraies.append(sample["audio"]["array"])
+
     # 3. generate predictions and make some post processing. 
     predictions = whisperer.main(transcriptions = transcriptions, audio_arraies = audio_arraies)
     def post_processing(x):
@@ -73,7 +67,7 @@ if __name__ == "__main__":
     transcriptions = list(map(post_processing, transcriptions))
     # 4. load the metric to compute 
     metric = evaluate.load(args.metric) 
-    with open("./scores.txt", mode="w", encoding="utf-8") as f:
+    with open(f"./{args.dataset_name}scores.txt", mode="w", encoding="utf-8") as f:
         for ref, pred in zip(transcriptions, predictions):
             try:
                 score = metric.compute(predictions = [pred], references=[ref])
