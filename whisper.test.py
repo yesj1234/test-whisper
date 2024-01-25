@@ -59,6 +59,7 @@ if __name__ == "__main__":
     
     # 2. load the dataset
     ds = load_dataset(args.dataset_name, "en_us", split="train", trust_remote_code=True)
+    logger.info(ds.info.description)
     transcriptions = []
     audio_arraies = []    
 
@@ -70,6 +71,7 @@ if __name__ == "__main__":
     predictions = whisperer.main(transcriptions = transcriptions, audio_arraies = audio_arraies)
     def post_processing(x):
         x = re.sub("[.,?!']", "", x)
+        x = x.lower()
         return x 
     
     
@@ -78,12 +80,22 @@ if __name__ == "__main__":
     transcriptions = list(map(post_processing, transcriptions))
     # 4. load the metric to compute 
     metric = evaluate.load(args.metric)
-
-    with open(f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}scores.txt", mode="w", encoding="utf-8") as f:
+    score_file_name = f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}scores.txt"
+    with open(score_file_name, mode="w", encoding="utf-8") as f:
         for ref, pred in zip(transcriptions, predictions):
             try:
                 score = metric.compute(predictions=[pred], references=[ref])
-                f.write(f"{pred} :: {ref} :: {round(score, 2)}\n")
+                f.write(f"{pred} :: {ref} :: {round(score, 6)}\n")
             except Exception as e:
                 print(e)
                 continue
+
+    with open(score_file_name, mode="r", encoding="utf-8") as g, open("model_dataset_scores.txt", mode="a+", encoding="utf-8") as h:
+        lines = g.readlines()
+        total = 0
+        for line in lines:
+            ref, pred, score = line.split(" :: ")
+            score = float(score[:-2])
+            total += score
+        logger.info(f"average score: {total / int(len(lines))}")
+        h.write(f"{args.model}|{args.dataset_name}|{total/int(len(lines))}  ")
