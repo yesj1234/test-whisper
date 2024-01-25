@@ -2,10 +2,10 @@ from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from datasets import load_dataset 
 import torch
 import evaluate 
-import re 
-from tqdm import tqdm 
-import logging 
-import sys 
+import re
+from tqdm import tqdm
+import logging
+import sys
 logger = logging.getLogger("WhisperLogger")
 logging.basicConfig(
     level=logging.INFO,
@@ -34,7 +34,7 @@ class MyWhisper:
         if not audio_arraies:
             raise ValueError("audio arraies are empty")
         predictions = []
-        for array in tqdm(audio_arraies, desc="Generating Predictions"):
+        for array in tqdm(audio_arraies, desc="Running Prediction"):
             input_features = self.processor(array, sampling_rate = 16_000, return_tensors="pt").input_features.to(self.device)
             prediction = self.predict_transcription(input_features)
             predictions.append(prediction)
@@ -58,20 +58,19 @@ if __name__ == "__main__":
     
     # 2. load the dataset
     ds = load_dataset(args.dataset_name, "en_us", split="train", trust_remote_code=True)
-    # log some basic information about the dataset used. 
     logger.info(ds.info.description)
-    logger.info()
-    transcriptions = []
-    audio_arraies = []    
+    transcriptions=[]
+    audio_arraies=[]    
 
     for sample in ds:
         transcriptions.append(sample["transcription"])
         audio_arraies.append(sample["audio"]["array"])
 
     # 3. generate predictions and make some post processing. 
-    predictions = whisperer.main(transcriptions = transcriptions, audio_arraies = audio_arraies)
+    predictions = whisperer.main(transcriptions=transcriptions, audio_arraies=audio_arraies)
     def post_processing(x):
         x = re.sub("[.,?!']", "", x)
+        x = x.lower()
         return x 
     
     
@@ -79,12 +78,23 @@ if __name__ == "__main__":
     predictions = list(map(post_processing, predictions))
     transcriptions = list(map(post_processing, transcriptions))
     # 4. load the metric to compute 
-    metric = evaluate.load(args.metric) 
-    with open(f"./{args.dataset_name}scores.txt", mode="w", encoding="utf-8") as f:
+    metric = evaluate.load(args.metric)
+    score_file_name = f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}_{args.language}scores.txt"
+    with open(score_file_name, mode="w", encoding="utf-8") as f:
         for ref, pred in zip(transcriptions, predictions):
             try:
-                score = metric.compute(predictions = [pred], references=[ref])
-                f.write(f"{pred} :: {ref} :: {round(score, 2)}\n")
+                score = metric.compute(predictions=[pred], references=[ref])
+                f.write(f"{pred} :: {ref} :: {round(score, 6)}\n")
             except Exception as e:
                 print(e)
                 continue
+
+    with open(score_file_name, mode="r", encoding="utf-8") as g, open("model_dataset_scores.txt", mode="a+", encoding="utf-8") as h:
+        lines = g.readlines()
+        total = 0
+        for line in lines:
+            ref, pred, score = line.split(" :: ")
+            score = float(score[:-2])
+            total += score
+        logger.info(f"average score: {total / int(len(lines))}")
+        h.write(f"{args.model} | {args.dataset_name} | {total/int(len(lines))}\n")
