@@ -3,6 +3,16 @@ from datasets import load_dataset
 import torch
 import evaluate 
 import re 
+from tqdm import tqdm 
+import logging 
+import sys 
+logger = logging.getLogger("WhisperLogger")
+logging.basicConfig(
+    level=logging.INFO,
+    format = "%(asctime)s|%(levelname)s|%(message)s",
+    datefmt="%d/%b/%Y %H:%M:%S",
+    stream= sys.stdout
+)
 # LANGUAGES: en(english), zh(chinese), ko(korean), ja(japanese) 
 
 
@@ -24,7 +34,7 @@ class MyWhisper:
         if not audio_arraies:
             raise ValueError("audio arraies are empty")
         predictions = []
-        for array in audio_arraies:
+        for array in tqdm(audio_arraies, desc="Generating Predictions"):
             input_features = self.processor(array, sampling_rate = 16_000, return_tensors="pt").input_features.to(self.device)
             prediction = self.predict_transcription(input_features)
             predictions.append(prediction)
@@ -48,6 +58,9 @@ if __name__ == "__main__":
     
     # 2. load the dataset
     ds = load_dataset(args.dataset_name, "en_us", split="train", trust_remote_code=True)
+    # log some basic information about the dataset used. 
+    logger.info(ds.info.description)
+    logger.info()
     transcriptions = []
     audio_arraies = []    
 
