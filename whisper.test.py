@@ -80,7 +80,7 @@ if __name__ == "__main__":
     transcriptions = list(map(post_processing, transcriptions))
     # 4. load the metric to compute 
     metric = evaluate.load(args.metric)
-    score_file_name = f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}scores.txt"
+    score_file_name = f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}_{args.language}scores.txt"
     with open(score_file_name, mode="w", encoding="utf-8") as f:
         for ref, pred in zip(transcriptions, predictions):
             try:
