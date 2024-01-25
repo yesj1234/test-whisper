@@ -79,7 +79,7 @@ if __name__ == "__main__":
     # 4. load the metric to compute 
     metric = evaluate.load(args.metric)
 
-    with open(f"./{args.dataset_name.replace('/', '_')}scores.txt", mode="w", encoding="utf-8") as f:
+    with open(f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}scores.txt", mode="w", encoding="utf-8") as f:
         for ref, pred in zip(transcriptions, predictions):
             try:
                 score = metric.compute(predictions=[pred], references=[ref])
