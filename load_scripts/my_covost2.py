@@ -121,24 +121,6 @@ class Covost2(datasets.GeneratorBasedBuilder):
 
         return [
             datasets.SplitGenerator(
-                name=datasets.Split.TRAIN,
-                gen_kwargs={
-                    "source_path": data_root,
-                    "covost_tsv_path": covost_tsv_path,
-                    "cv_tsv_path": cv_tsv_path,
-                    "split": "train",
-                },
-            ),
-            datasets.SplitGenerator(
-                name=datasets.Split.VALIDATION,
-                gen_kwargs={
-                    "source_path": data_root,
-                    "covost_tsv_path": covost_tsv_path,
-                    "cv_tsv_path": cv_tsv_path,
-                    "split": "dev",
-                },
-            ),
-            datasets.SplitGenerator(
                 name=datasets.Split.TEST,
                 gen_kwargs={
                     "source_path": data_root,

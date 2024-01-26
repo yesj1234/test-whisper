@@ -339,28 +339,6 @@ class AMI(datasets.GeneratorBasedBuilder):
 
         return [
             datasets.SplitGenerator(
-                name=datasets.Split.TRAIN,
-                gen_kwargs={
-                    "audio_archives": [dl_manager.iter_archive(archive) for archive in audio_archives["train"]],
-                    "local_extracted_archives_paths": local_extracted_archives_paths["train"],
-                    "annotation": annotations["train"],
-                    "transcript_files": transcript_archive_path["train"],
-                    "split": "train",
-                    "config": self.config.name,
-                },
-            ),
-            datasets.SplitGenerator(
-                name=datasets.Split.VALIDATION,
-                gen_kwargs={
-                    "audio_archives": [dl_manager.iter_archive(archive) for archive in audio_archives["dev"]],
-                    "local_extracted_archives_paths": local_extracted_archives_paths["dev"],
-                    "annotation": annotations["dev"],
-                    "transcript_files": transcript_archive_path["validation"],
-                    "split": "dev",
-                    "config": self.config.name,
-                },
-            ),
-            datasets.SplitGenerator(
                 name=datasets.Split.TEST,
                 gen_kwargs={
                     "audio_archives": [dl_manager.iter_archive(archive) for archive in audio_archives["eval"]],

@@ -188,16 +188,9 @@ def _make_builder_configs():
             """,
         url="https://www.openslr.org/51/",
         download_urls={
-            "train": [
-                _DL_URL + os.path.join("TEDLIUM_release3", "speaker-adaptation", "train_1.tar.gz"),
-                _DL_URL + os.path.join("TEDLIUM_release3", "speaker-adaptation", "train_2.tar.gz"),
-            ],
-            "validation": [_DL_URL + os.path.join("TEDLIUM_release3", "speaker-adaptation", "dev.tar.gz")],
             "test": [_DL_URL + os.path.join("TEDLIUM_release3", "speaker-adaptation", "test.tar.gz")],
         },
         split_paths=[
-            (datasets.Split.TRAIN, "train"),
-            (datasets.Split.VALIDATION, "dev"),
             (datasets.Split.TEST, "test"),
         ],
     )

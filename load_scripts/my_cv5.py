@@ -24,7 +24,7 @@ import requests
 from datasets.utils.py_utils import size_str
 from huggingface_hub import HfApi, HfFolder
 
-from .languages import LANGUAGES
+LANGUAGES = {'ab': 'Abkhaz', 'ace': 'Acehnese', 'ady': 'Adyghe', 'af': 'Afrikaans', 'am': 'Amharic', 'an': 'Aragonese', 'ar': 'Arabic', 'arn': 'Mapudungun', 'as': 'Assamese', 'ast': 'Asturian', 'az': 'Azerbaijani', 'ba': 'Bashkir', 'bas': 'Basaa', 'be': 'Belarusian', 'bg': 'Bulgarian', 'bn': 'Bengali', 'br': 'Breton', 'bs': 'Bosnian', 'bxr': 'Buryat', 'ca': 'Catalan', 'cak': 'Kaqchikel', 'ckb': 'Central Kurdish', 'cnh': 'Hakha Chin', 'co': 'Corsican', 'cs': 'Czech', 'cv': 'Chuvash', 'cy': 'Welsh', 'da': 'Danish', 'de': 'German', 'dsb': 'Sorbian, Lower', 'dv': 'Dhivehi', 'dyu': 'Dioula', 'el': 'Greek', 'en': 'English', 'eo': 'Esperanto', 'es': 'Spanish', 'et': 'Estonian', 'eu': 'Basque', 'fa': 'Persian', 'ff': 'Fulah', 'fi': 'Finnish', 'fo': 'Faroese', 'fr': 'French', 'fy-NL': 'Frisian', 'ga-IE': 'Irish', 'gl': 'Galician', 'gn': 'Guarani', 'gom': 'Goan Konkani', 'ha': 'Hausa', 'he': 'Hebrew', 'hi': 'Hindi', 'hr': 'Croatian', 'hsb': 'Sorbian, Upper', 'ht': 'Haitian', 'hu': 'Hungarian', 'hy-AM': 'Armenian', 'hyw': 'Armenian Western', 'ia': 'Interlingua', 'id': 'Indonesian', 'ie': 'Interlingue', 'ig': 'Igbo', 'is': 'Icelandic', 'it': 'Italian', 'izh': 'Izhorian', 'ja': 'Japanese', 'ka': 'Georgian', 'kaa': 'Karakalpak', 'kab': 'Kabyle', 'kbd': 'Kabardian', 'ki': 'Kikuyu', 'kk': 'Kazakh', 'km': 'Khmer', 'kmr': 'Kurmanji Kurdish', 'knn': 'Konkani (Devanagari)', 'ko': 'Korean', 'kpv': 'Komi-Zyrian', 'kw': 'Cornish', 'ky': 'Kyrgyz', 'lb': 'Luxembourgish', 'lg': 'Luganda', 'lij': 'Ligurian', 'lt': 'Lithuanian', 'lv': 'Latvian', 'mai': 'Maithili', 'mdf': 'Moksha', 'mg': 'Malagasy', 'mhr': 'Meadow Mari', 'mk': 'Macedonian', 'ml': 'Malayalam', 'mn': 'Mongolian', 'mni': 'Meetei Lon', 'mos': 'Mossi', 'mr': 'Marathi', 'mrj': 'Hill Mari', 'ms': 'Malay', 'mt': 'Maltese', 'my': 'Burmese', 'myv': 'Erzya', 'nan-tw': 'Taiwanese (Minnan)', 'nb-NO': 'Norwegian Bokmål', 'nd': 'IsiNdebele (North)', 'ne-NP': 'Nepali', 'nia': 'Nias', 'nl': 'Dutch', 'nn-NO': 'Norwegian Nynorsk', 'nr': 'IsiNdebele (South)', 'nso': 'Northern Sotho', 'nyn': 'Runyankole', 'oc': 'Occitan', 'om': 'Afaan Ormoo', 'or': 'Odia', 'pa-IN': 'Punjabi', 'pap-AW': 'Papiamento (Aruba)', 'pl': 'Polish', 'ps': 'Pashto', 'pt': 'Portuguese', 'quc': "K'iche'", 'quy': 'Quechua Chanka', 'rm-sursilv': 'Romansh Sursilvan', 'rm-vallader': 'Romansh Vallader', 'ro': 'Romanian', 'ru': 'Russian', 'rw': 'Kinyarwanda', 'sah': 'Sakha', 'sat': 'Santali (Ol Chiki)', 'sc': 'Sardinian', 'scn': 'Sicilian', 'shi': 'Shilha', 'si': 'Sinhala', 'sk': 'Slovak', 'skr': 'Saraiki', 'sl': 'Slovenian', 'so': 'Somali', 'sq': 'Albanian', 'sr': 'Serbian', 'ss': 'Siswati', 'st': 'Southern Sotho', 'sv-SE': 'Swedish', 'sw': 'Swahili', 'syr': 'Syriac', 'ta': 'Tamil', 'te': 'Telugu', 'tg': 'Tajik', 'th': 'Thai', 'ti': 'Tigrinya', 'tig': 'Tigre', 'tk': 'Turkmen', 'tl': 'Tagalog', 'tn': 'Setswana', 'tok': 'Toki Pona', 'tr': 'Turkish', 'ts': 'Xitsonga', 'tt': 'Tatar', 'tw': 'Twi', 'ty': 'Tahitian', 'uby': 'Ubykh', 'udm': 'Udmurt', 'ug': 'Uyghur', 'uk': 'Ukrainian', 'ur': 'Urdu', 'uz': 'Uzbek', 've': 'Tshivenda', 'vec': 'Venetian', 'vi': 'Vietnamese', 'vot': 'Votic', 'xh': 'Xhosa', 'yi': 'Yiddish', 'yo': 'Yoruba', 'yue': 'Cantonese', 'zh-CN': 'Chinese (China)', 'zh-HK': 'Chinese (Hong Kong)', 'zh-TW': 'Chinese (Taiwan)', 'zu': 'Zulu'}
 from .release_stats import STATS
 
 _CITATION = """\
@@ -101,7 +101,7 @@ class CommonVoice(datasets.GeneratorBasedBuilder):
             {
                 "client_id": datasets.Value("string"),
                 "path": datasets.Value("string"),
-                "audio": datasets.features.Audio(sampling_rate=48_000),
+                "audio": datasets.features.Audio(sampling_rate=16_000),
                 "sentence": datasets.Value("string"),
                 "up_votes": datasets.Value("int64"),
                 "down_votes": datasets.Value("int64"),
@@ -167,49 +167,11 @@ class CommonVoice(datasets.GeneratorBasedBuilder):
 
         return [
             datasets.SplitGenerator(
-                name=datasets.Split.TRAIN,
-                gen_kwargs={
-                    "local_extracted_archive": local_extracted_archive,
-                    "archive_iterator": dl_manager.iter_archive(archive_path),
-                    "metadata_filepath": "/".join([path_to_data, "train.tsv"]) if path_to_data else "train.tsv",
-                    "path_to_clips": path_to_clips,
-                },
-            ),
-            datasets.SplitGenerator(
                 name=datasets.Split.TEST,
                 gen_kwargs={
                     "local_extracted_archive": local_extracted_archive,
                     "archive_iterator": dl_manager.iter_archive(archive_path),
                     "metadata_filepath": "/".join([path_to_data, "test.tsv"]) if path_to_data else "test.tsv",
-                    "path_to_clips": path_to_clips,
-                },
-            ),
-            datasets.SplitGenerator(
-                name=datasets.Split.VALIDATION,
-                gen_kwargs={
-                    "local_extracted_archive": local_extracted_archive,
-                    "archive_iterator": dl_manager.iter_archive(archive_path),
-                    "metadata_filepath": "/".join([path_to_data, "dev.tsv"]) if path_to_data else "dev.tsv",
-                    "path_to_clips": path_to_clips,
-                },
-            ),
-            datasets.SplitGenerator(
-                name="other",
-                gen_kwargs={
-                    "local_extracted_archive": local_extracted_archive,
-                    "archive_iterator": dl_manager.iter_archive(archive_path),
-                    "metadata_filepath": "/".join([path_to_data, "other.tsv"]) if path_to_data else "other.tsv",
-                    "path_to_clips": path_to_clips,
-                },
-            ),
-            datasets.SplitGenerator(
-                name="invalidated",
-                gen_kwargs={
-                    "local_extracted_archive": local_extracted_archive,
-                    "archive_iterator": dl_manager.iter_archive(archive_path),
-                    "metadata_filepath": "/".join([path_to_data, "invalidated.tsv"])
-                    if path_to_data
-                    else "invalidated.tsv",
                     "path_to_clips": path_to_clips,
                 },
             ),
