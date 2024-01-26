@@ -45,26 +45,10 @@ _DL_URL = "http://www.openslr.org/resources/12/"
 
 
 _DL_URLS = {
-    "clean": {
-        "dev": _DL_URL + "dev-clean.tar.gz",
-        "test": _DL_URL + "test-clean.tar.gz",
-        "train.100": _DL_URL + "train-clean-100.tar.gz",
-        "train.360": _DL_URL + "train-clean-360.tar.gz",
-    },
-    "other": {
-        "test": _DL_URL + "test-other.tar.gz",
-        "dev": _DL_URL + "dev-other.tar.gz",
-        "train.500": _DL_URL + "train-other-500.tar.gz",
-    },
     "all": {
-        "dev.clean": _DL_URL + "dev-clean.tar.gz",
-        "dev.other": _DL_URL + "dev-other.tar.gz",
         "test.clean": _DL_URL + "test-clean.tar.gz",
         "test.other": _DL_URL + "test-other.tar.gz",
-        "train.clean.100": _DL_URL + "train-clean-100.tar.gz",
-        "train.clean.360": _DL_URL + "train-clean-360.tar.gz",
-        "train.other.500": _DL_URL + "train-other-500.tar.gz",
-    },
+    }
 }
 
 
@@ -89,8 +73,6 @@ class LibrispeechASR(datasets.GeneratorBasedBuilder):
     DEFAULT_WRITER_BATCH_SIZE = 256
     DEFAULT_CONFIG_NAME = "all"
     BUILDER_CONFIGS = [
-        LibrispeechASRConfig(name="clean", description="'Clean' speech."),
-        LibrispeechASRConfig(name="other", description="'Other', more challenging, speech."),
         LibrispeechASRConfig(name="all", description="Combined clean and other dataset."),
     ]
 

@@ -67,13 +67,9 @@ def _make_builder_configs():
         """,
         url="https://www.openslr.org/7/",
         download_urls={
-            "train": [_DL_URL + os.path.join("TEDLIUM_release1", "train.tar.gz")],
-            "validation": [_DL_URL + os.path.join("TEDLIUM_release1", "dev.tar.gz")],
             "test": [_DL_URL + os.path.join("TEDLIUM_release1", "test.tar.gz")],
         },
         split_paths=[
-            (datasets.Split.TRAIN, "train"),
-            (datasets.Split.VALIDATION, "dev"),
             (datasets.Split.TEST, "test"),
         ],
     )
@@ -102,16 +98,9 @@ def _make_builder_configs():
         """,
         url="https://www.openslr.org/19/",
         download_urls={
-            "train": [
-                _DL_URL + os.path.join("TEDLIUM_release2", "train_1.tar.gz"),
-                _DL_URL + os.path.join("TEDLIUM_release2", "train_2.tar.gz"),
-            ],
-            "validation": [_DL_URL + os.path.join("TEDLIUM_release2", "dev.tar.gz")],
             "test": [_DL_URL + os.path.join("TEDLIUM_release2", "test.tar.gz")],
         },
         split_paths=[
-            (datasets.Split.TRAIN, "train"),
-            (datasets.Split.VALIDATION, "dev"),
             (datasets.Split.TEST, "test"),
         ],
     )
@@ -152,16 +141,9 @@ def _make_builder_configs():
         """,
         url="https://www.openslr.org/51/",
         download_urls={
-            "train": [
-                _DL_URL + os.path.join("TEDLIUM_release3", "legacy", "train_1.tar.gz"),
-                _DL_URL + os.path.join("TEDLIUM_release3", "legacy", "train_2.tar.gz"),
-            ],
-            "validation": [_DL_URL + os.path.join("TEDLIUM_release3", "legacy", "dev.tar.gz")],
             "test": [_DL_URL + os.path.join("TEDLIUM_release3", "legacy", "test.tar.gz")],
         },
         split_paths=[
-            (datasets.Split.TRAIN, "train"),
-            (datasets.Split.VALIDATION, "dev"),
             (datasets.Split.TEST, "test"),
         ],
     )

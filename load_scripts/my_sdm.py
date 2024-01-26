@@ -312,8 +312,8 @@ class AMI(datasets.GeneratorBasedBuilder):
         )
 
     def _split_generators(self, dl_manager):
-        splits = ["train", "dev", "eval"]
-        splits_alt = ["train", "validation", "test"]
+        splits = ["eval"]
+        splits_alt = ["test"]
 
         audio_archives_urls = {}
         for split in splits:

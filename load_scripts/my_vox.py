@@ -1,115 +1,197 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
-#
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
-import csv
-import argparse
-from tqdm import tqdm
-from ast import literal_eval
-import gzip
-from pathlib import Path
-from typing import Dict, List, Tuple
 from collections import defaultdict
+import os
+import json
+import csv
 
-import torch
-import torchaudio
-from torchaudio.datasets.utils import download_url
-
-from voxpopuli import ASR_LANGUAGES, ASR_ACCENTED_LANGUAGES, DOWNLOAD_BASE_URL
-from voxpopuli.utils import multiprocess_run
+import datasets
 
 
-SPLITS = ["train", "dev", "test"]
+_DESCRIPTION = """
+A large-scale multilingual speech corpus for representation learning, semi-supervised learning and interpretation.
+"""
+
+_CITATION = """
+@inproceedings{wang-etal-2021-voxpopuli,
+    title = "{V}ox{P}opuli: A Large-Scale Multilingual Speech Corpus for Representation Learning, 
+    Semi-Supervised Learning and Interpretation",
+    author = "Wang, Changhan  and
+      Riviere, Morgane  and
+      Lee, Ann  and
+      Wu, Anne  and
+      Talnikar, Chaitanya  and
+      Haziza, Daniel  and
+      Williamson, Mary  and
+      Pino, Juan  and
+      Dupoux, Emmanuel",
+    booktitle = "Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics 
+    and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers)",
+    month = aug,
+    year = "2021",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2021.acl-long.80",
+    doi = "10.18653/v1/2021.acl-long.80",
+    pages = "993--1003",
+}
+"""
+
+_HOMEPAGE = "https://github.com/facebookresearch/voxpopuli"
+
+_LICENSE = "CC0, also see https://www.europarl.europa.eu/legal-notice/en/"
+
+_ASR_LANGUAGES = [
+    "en"
+]
+_ASR_ACCENTED_LANGUAGES = [
+    "en_accented"
+]
+
+_LANGUAGES = _ASR_LANGUAGES + _ASR_ACCENTED_LANGUAGES
+
+_BASE_DATA_DIR = "data/"
+
+_N_SHARDS_FILE = _BASE_DATA_DIR + "n_files.json"
+
+_AUDIO_ARCHIVE_PATH = _BASE_DATA_DIR + "{lang}/{split}/{split}_part_{n_shard}.tar.gz"
+
+_METADATA_PATH = _BASE_DATA_DIR + "{lang}/asr_{split}.tsv"
 
 
-def cut_session(info: Tuple[str, Dict[str, List[Tuple[float, float]]]]) -> None:
-    in_path, out_path_to_timestamps = info
-    waveform, sr = torchaudio.load(in_path)
-    duration = waveform.size(1)
-    for out_path, timestamps in out_path_to_timestamps.items():
-        segment = torch.cat(
-            [waveform[:, int(s * sr): min(int(t * sr), duration)]
-             for s, t in timestamps],
-            dim=1
-        )
-        torchaudio.save(out_path, segment, sr)
+class VoxpopuliConfig(datasets.BuilderConfig):
+    """BuilderConfig for VoxPopuli."""
+
+    def __init__(self, name, languages="all", **kwargs):
+        """
+        Args:
+          name: `string` or `List[string]`:
+            name of a config: either one of the supported languages or "multilang" for many languages.
+            By default, "multilang" config includes all languages, including accented ones.
+            To specify a custom set of languages, pass them to the `languages` parameter
+          languages: `List[string]`: if config is "multilang" can be either "all" for all available languages,
+            excluding accented ones (default), or a custom list of languages.
+          **kwargs: keyword arguments forwarded to super.
+        """
+        if name == "multilang":
+            self.languages = _ASR_LANGUAGES if languages == "all" else languages
+            name = "multilang" if languages == "all" else "_".join(languages)
+        else:
+            self.languages = [name]
+
+        super().__init__(name=name, **kwargs)
 
 
-def get(args):
-    in_root = Path(args.root) / "raw_audios" / "original"
-    out_root = Path(args.root) / "transcribed_data" / args.lang
-    out_root.mkdir(exist_ok=True, parents=True)
-    # Get metadata TSV
-    url = f"{DOWNLOAD_BASE_URL}/annotations/asr/asr_{args.lang}.tsv.gz"
-    tsv_path = out_root / Path(url).name
-    if not tsv_path.exists():
-        download_url(url, out_root.as_posix(), Path(url).name)
-    with gzip.open(tsv_path, "rt") as f:
-        metadata = [x for x in csv.DictReader(f, delimiter="|")]
-    # Get segment into list
-    items = defaultdict(dict)
-    manifest = []
-    for r in tqdm(metadata):
-        split = r["split"]
-        if split not in SPLITS:
-            continue
-        event_id = r["session_id"]
-        year = event_id[:4]
-        in_path = in_root / year / f"{event_id}_original.ogg"
-        cur_out_root = out_root / year
-        cur_out_root.mkdir(exist_ok=True, parents=True)
-        out_path = cur_out_root / "{}-{}.ogg".format(event_id, r["id_"])
-        timestamps = [(t[0], t[1]) for t in literal_eval(r["vad"])]
-        items[in_path.as_posix()][out_path.as_posix()] = timestamps
-        manifest.append(
-            (
-             out_path.stem,
-             r["original_text"],
-             r["normed_text"],
-             r["speaker_id"],
-             split,
-             r["gender"],
-             r.get("is_gold_transcript", str(False)),
-             r.get("accent", str(None))
+class Voxpopuli(datasets.GeneratorBasedBuilder):
+    """The VoxPopuli dataset."""
+
+    VERSION = datasets.Version("1.3.0")  # TODO: version
+    BUILDER_CONFIGS = [
+        VoxpopuliConfig(
+            name=name,
+            version=datasets.Version("1.3.0"),
             )
-        )
-    items = list(items.items())
-    # Segment
-    multiprocess_run(items, cut_session)
-    # Output per-split manifest
-    header = [
-        "id", "raw_text", "normalized_text", "speaker_id", "split",
-        "gender", "is_gold_transcript", "accent"
+        for name in _LANGUAGES + ["multilang"]
     ]
-    for split in SPLITS:
-        with open(out_root / f"asr_{split}.tsv", "w") as f_o:
-            f_o.write("\t".join(header) + "\n")
-            for cols in manifest:
-                if cols[4] == split:
-                    f_o.write("\t".join(cols) + "\n")
+    DEFAULT_WRITER_BATCH_SIZE = 256
 
+    def _info(self):
+        features = datasets.Features(
+            {
+                "audio_id": datasets.Value("string"),
+                "language": datasets.ClassLabel(names=_LANGUAGES),
+                "audio": datasets.Audio(sampling_rate=16_000),
+                "raw_text": datasets.Value("string"),
+                "normalized_text": datasets.Value("string"),
+                "gender": datasets.Value("string"),  # TODO: ClassVar?
+                "speaker_id": datasets.Value("string"),
+                "is_gold_transcript": datasets.Value("bool"),
+                "accent": datasets.Value("string"),
+            }
+        )
+        return datasets.DatasetInfo(
+            description=_DESCRIPTION,
+            features=features,
+            homepage=_HOMEPAGE,
+            license=_LICENSE,
+            citation=_CITATION,
+        )
 
-def get_args():
-    parser = argparse.ArgumentParser("Prepare transcribed data")
-    parser.add_argument(
-        "--root",
-        help="data root path",
-        type=str,
-        required=True,
-    )
-    parser.add_argument(
-        "--lang",
-        required=True,
-        type=str,
-        choices=ASR_LANGUAGES + ASR_ACCENTED_LANGUAGES,
-    )
-    return parser.parse_args()
+    def _split_generators(self, dl_manager):
+        n_shards_path = dl_manager.download_and_extract(_N_SHARDS_FILE)
+        with open(n_shards_path) as f:
+            n_shards = json.load(f)
 
+        splits = ["test"]
 
-def main():
-    args = get_args()
-    get(args)
+        audio_urls = defaultdict(dict)
+        for split in splits:
+            for lang in self.config.languages:
+                audio_urls[split][lang] = [
+                    _AUDIO_ARCHIVE_PATH.format(lang=lang, split=split, n_shard=i) for i in range(n_shards[lang][split])
+                ]
 
+        meta_urls = defaultdict(dict)
+        for split in splits:
+            for lang in self.config.languages:
+                meta_urls[split][lang] = _METADATA_PATH.format(lang=lang, split=split)
 
-if __name__ == "__main__":
-    main()
+        # dl_manager.download_config.num_proc = len(urls)
+
+        meta_paths = dl_manager.download_and_extract(meta_urls)
+        audio_paths = dl_manager.download(audio_urls)
+
+        local_extracted_audio_paths = (
+            dl_manager.extract(audio_paths) if not dl_manager.is_streaming else
+            {
+                split: {lang: [None] * len(audio_paths[split][lang]) for lang in self.config.languages} for split in splits
+            }
+        )
+        if self.config.name == "en_accented":
+            return [
+                datasets.SplitGenerator(
+                    name=datasets.Split.TEST,
+                    gen_kwargs={
+                        "audio_archives": {
+                            lang: [dl_manager.iter_archive(archive) for archive in lang_archives]
+                            for lang, lang_archives in audio_paths["test"].items()
+                        },
+                        "local_extracted_archives_paths": local_extracted_audio_paths["test"],
+                        "metadata_paths": meta_paths["test"],
+                    }
+                ),
+            ]
+
+        return [
+            datasets.SplitGenerator(
+                name=datasets.Split.TEST,
+                gen_kwargs={
+                    "audio_archives": {
+                        lang: [dl_manager.iter_archive(archive) for archive in lang_archives]
+                        for lang, lang_archives in audio_paths["test"].items()
+                    },
+                    "local_extracted_archives_paths": local_extracted_audio_paths["test"],
+                    "metadata_paths": meta_paths["test"],
+                }
+            ),
+        ]
+
+    def _generate_examples(self, audio_archives, local_extracted_archives_paths, metadata_paths):
+        assert len(metadata_paths) == len(audio_archives) == len(local_extracted_archives_paths)
+        features = ["raw_text", "normalized_text", "speaker_id", "gender", "is_gold_transcript", "accent"]
+
+        for lang in self.config.languages:
+            assert len(audio_archives[lang]) == len(local_extracted_archives_paths[lang])
+
+            meta_path = metadata_paths[lang]
+            with open(meta_path) as f:
+                metadata = {x["id"]: x for x in csv.DictReader(f, delimiter="\t")}
+
+            for audio_archive, local_extracted_archive_path in zip(audio_archives[lang], local_extracted_archives_paths[lang]):
+                for audio_filename, audio_file in audio_archive:
+                    audio_id = audio_filename.split(os.sep)[-1].split(".wav")[0]
+                    path = os.path.join(local_extracted_archive_path, audio_filename) if local_extracted_archive_path else audio_filename
+
+                    yield audio_id, {
+                        "audio_id": audio_id,
+                        "language": lang,
+                        **{feature: metadata[audio_id][feature] for feature in features},
+                        "audio": {"path": path, "bytes": audio_file.read()},
+                    }
