@@ -24,11 +24,20 @@
 # --metric wer 
 
 #cv9
+# python3 whisper.test.py \
+# --model openai/whisper-large-v2 \
+# --lang en \
+# --language english \
+# --load_script ./load_scripts/my_cv9.py \
+# --dataset_name cv9 \
+# --metric wer 
+
+#ihm
 python3 whisper.test.py \
 --model openai/whisper-large-v2 \
 --lang en \
 --language english \
---load_script ./load_scripts/my_cv9.py \
---dataset_name cv9 \
+--load_script ./load_scripts/my_ihm.py \
+--dataset_name ihm \
 --metric wer 
 

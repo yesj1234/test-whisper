@@ -9,6 +9,7 @@ import logging
 import sys
 import os
 from utils.loading import DataLoader
+from normalizers.english import EnglishTextNormalizer
 logger = logging.getLogger("WhisperLogger")
 logging.basicConfig(
     level=logging.INFO,
@@ -80,7 +81,9 @@ if __name__ == "__main__":
 
     # 3. generate predictions and make some post processing. 
     predictions = whisperer.main(transcriptions=transcriptions, audio_arraies=audio_arraies)
+    english_normalizer = EnglishTextNormalizer()
     def post_processing(x):
+        x = english_normalizer(x)
         x = re.sub("[.,?!']", "", x)
         x = x.lower()
         x = x.strip()

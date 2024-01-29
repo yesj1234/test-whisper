@@ -17,10 +17,10 @@ class MyReformer:
                 "remove_cols": ['id', 'num_samples', 'path', 'gender', 'lang_id', 'language', 'lang_group_id'],
                 "remain_cols": ['transcription', 'audio']},
             "ihm": {
-                "remove_cols": ['meeting_id', 'id', 'text', 'audio', 'begin_time', 'end_time', 'microphone_id', 'speaker_id', 'whisper_transcript'],
+                "remove_cols": ['meeting_id', 'id', 'begin_time', 'end_time', 'microphone_id', 'speaker_id', 'whisper_transcript'],
                 "remain_cols": ['text', 'audio']},
             "sdm": {
-                "remove_cols": ['meeting_id', 'id', 'text', 'audio', 'begin_time', 'end_time', 'microphone_id', 'speaker_id', 'whisper_transcript'],
+                "remove_cols": ['meeting_id', 'id', 'begin_time', 'end_time', 'microphone_id', 'speaker_id', 'whisper_transcript'],
                 "remain_cols": ['text', 'audio']},
             "ted": {
                 "remove_cols": ['speaker_id', 'gender', 'id', 'file'],
