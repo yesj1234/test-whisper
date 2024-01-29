@@ -10,6 +10,7 @@ import sys
 import os
 from utils.loading import DataLoader
 from normalizers.english import EnglishTextNormalizer
+from normalizers.basic import BasicTextNormalizer
 logger = logging.getLogger("WhisperLogger")
 logging.basicConfig(
     level=logging.INFO,
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     parser.add_argument("--language", help="english, korean, chinese, japanese")
     parser.add_argument("--load_script", help="repo/dataset_name")
     parser.add_argument("--dataset_name", help="one of [cv5, cv9, ihm, sdm, libri, ted, fleur, vox]")
-    parser.add_argument("--lang", help="en ko ja zh-CN")
+    parser.add_argument("--lang", help="usually pick one of the following [en ko ja zh-CN]. \n For fleur pick one of [cmn, en_us, ja_jp, ko_kr, yue]")
     parser.add_argument("--metric", help="wer for english / cer for korean, japanese, chinese")
     parser.add_argument("--split", help="Usually one of [test, validation, train]. Libri[test.other, test.clean]")
     args = parser.parse_args()
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     dataLoader = DataLoader()
     ds = dataLoader.load(dataset_name=args.dataset_name, load_script=args.load_script, lang=args.lang, split=args.split)
     dataset_reformer = MyReformer()
-    ds = dataset_reformer.process_dataset(ds, name=args.dataset_name)
+    ds = dataset_reformer(ds, name=args.dataset_name)
     logger.info(ds.info.description)
     logger.info(ds)
     
@@ -81,19 +82,23 @@ if __name__ == "__main__":
 
     # 3. generate predictions and make some post processing. 
     predictions = whisperer.main(transcriptions=transcriptions, audio_arraies=audio_arraies)
-    english_normalizer = EnglishTextNormalizer()
+    if args.language == "english":
+        normalizer = EnglishTextNormalizer()
+    if args.language in ["japanese", "chinese"]:
+        normalizer = BasicTextNormalizer(split_letters=True)
+    if args.language == "korean":
+        normalizer = BasicTextNormalizer()
+    
     def post_processing(x):
-        x = english_normalizer(x)
-        x = re.sub("[.,?!']", "", x)
-        x = x.lower()
-        x = x.strip()
+        x = normalizer(x)
         return x 
     
     
     predictions = list(map(lambda x: x[0], predictions))
     predictions = list(map(post_processing, predictions))
     transcriptions = list(map(post_processing, transcriptions))
-    # 4. load the metric to compute 
+    
+    # 4. load the metric to compute and write loggings.
     metric = evaluate.load(args.metric)
     score_file_name = f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}_{args.language}scores.txt"
     with open(score_file_name, mode="w", encoding="utf-8") as f:
@@ -105,6 +110,7 @@ if __name__ == "__main__":
                 print(e)
                 continue
 
+    
     with open(score_file_name, mode="r", encoding="utf-8") as g, open("model_dataset_scores.txt", mode="a+", encoding="utf-8") as h:
         lines = g.readlines()
         total = 0
