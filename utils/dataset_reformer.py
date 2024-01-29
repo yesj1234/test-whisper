@@ -13,7 +13,7 @@ class MyReformer:
             "cv9": {
                 "remove_cols":  ['client_id', 'path', 'up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment'],
                 "remain_cols": ['sentence', 'audio']},
-            "fleur": {
+            "fleurs": {
                 "remove_cols": ['id', 'num_samples', 'path', 'gender', 'lang_id', 'language', 'lang_group_id', 'raw_transcription'],
                 "remain_cols": ['transcription', 'audio']},
             "ihm": {

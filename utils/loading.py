@@ -32,12 +32,12 @@ class DataLoader:
         ds = load_dataset(script, 'release1', trust_remote_code=True)
         return ds 
     
-    def load_fleur(self, script, lang, split):
+    def load_fleurs(self, script, lang, split):
         ds = load_dataset(script, lang, split=split, trust_remote_code=True)
         return ds  
     
-    def load_vox(self, script):
-        ds = load_datset(script, "en", trust_remote_code = True)
+    def load_vox(self, script, lang):
+        ds = load_dataset(script, lang, trust_remote_code = True)
         return ds
     
     def load(self, dataset_name, **kwargs):
@@ -57,8 +57,8 @@ class DataLoader:
             return self.load_libri(load_script, split)
         if dataset_name == "ted":
             return self.load_ted(load_script)
-        if dataset_name == "fleur":
-            return self.load_fleur(load_script, lang, split)
+        if dataset_name == "fleurs":
+            return self.load_fleurs(load_script, lang, split)
         if dataset_name == "vox":
-            return self.load_vox(load_script)
+            return self.load_vox(load_script, lang)
     
