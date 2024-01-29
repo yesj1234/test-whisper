@@ -29,11 +29,11 @@ class DataLoader:
         return ds
     
     def load_ted(self, script):
-        ds = load_dataset(script, trust_remote_code=True)
+        ds = load_dataset(script, 'release1', trust_remote_code=True)
         return ds 
     
-    def load_fleur(self, script):
-        ds = load_dataset(script, trust_remote_code=True)
+    def load_fleur(self, script, lang, split):
+        ds = load_dataset(script, lang, split=split, trust_remote_code=True)
         return ds  
     
     def load_vox(self, script):
@@ -58,7 +58,7 @@ class DataLoader:
         if dataset_name == "ted":
             return self.load_ted(load_script)
         if dataset_name == "fleur":
-            return self.load_fleur(load_script)
+            return self.load_fleur(load_script, lang, split)
         if dataset_name == "vox":
             return self.load_vox(load_script)
     

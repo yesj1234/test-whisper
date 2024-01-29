@@ -14,7 +14,7 @@ class MyReformer:
                 "remove_cols":  ['client_id', 'path', 'up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment'],
                 "remain_cols": ['sentence', 'audio']},
             "fleur": {
-                "remove_cols": ['id', 'num_samples', 'path', 'gender', 'lang_id', 'language', 'lang_group_id'],
+                "remove_cols": ['id', 'num_samples', 'path', 'gender', 'lang_id', 'language', 'lang_group_id', 'raw_transcription'],
                 "remain_cols": ['transcription', 'audio']},
             "ihm": {
                 "remove_cols": ['meeting_id', 'id', 'begin_time', 'end_time', 'microphone_id', 'speaker_id', 'whisper_transcript'],
@@ -45,7 +45,7 @@ class MyReformer:
         logger.addHandler(streamHandler)
         return logger  
 
-    def process_dataset(self, dataset, name):
+    def __call__(self, dataset, name):
         #1. if self.dataset is of class DatasetDict get the test split only
         if isinstance(dataset, DatasetDict):
             first_split = list(dataset.keys())[0] # should be test split 
@@ -60,7 +60,8 @@ class MyReformer:
         cols_to_remove = self.dataset_cols[name]["remove_cols"]
         remain_cols = self.dataset_cols[name]["remain_cols"]
         dataset = dataset.remove_columns(cols_to_remove)
-        dataset = dataset.rename_column(remain_cols[0], "transcription")
+        if remain_cols[0] != "transcription":
+            dataset = dataset.rename_column(remain_cols[0], "transcription")
                 
         return dataset 
     
