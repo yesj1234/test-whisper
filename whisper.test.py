@@ -2,12 +2,13 @@ from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from datasets import load_dataset 
 import torch
 import evaluate
-from .dataset_reformer import MyReformer
+from utils.dataset_reformer import MyReformer
 import re
 from tqdm import tqdm
 import logging
 import sys
 import os
+from utils.loading import DataLoader
 logger = logging.getLogger("WhisperLogger")
 logging.basicConfig(
     level=logging.INFO,
@@ -46,12 +47,13 @@ class MyWhisper:
 if __name__ == "__main__":
     import argparse 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", help="repo/model_name")
+    parser.add_argument("--model", help="repo/model_name, [openai/whisper-large-v2, openai/whisper-large-v3]", default="openai/whisper-large-v2")
     parser.add_argument("--language", help="english, korean, chinese, japanese")
     parser.add_argument("--load_script", help="repo/dataset_name")
     parser.add_argument("--dataset_name", help="one of [cv5, cv9, ihm, sdm, libri, ted, fleur, vox]")
     parser.add_argument("--lang", help="en ko ja zh-CN")
     parser.add_argument("--metric", help="wer for english / cer for korean, japanese, chinese")
+    parser.add_argument("--split", help="Usually one of [test, validation, train]. Libri[test.other, test.clean]")
     args = parser.parse_args()
     
     # 1. get the model and processor and initialize MyWhisper 
@@ -62,26 +64,11 @@ if __name__ == "__main__":
     
     # 2. load the dataset
     # multi language support: fleurs, vox, cv9, covost2(later work)
-    if args.dataset_name == "cv5": 
-        ds = load_dataset(args.load_script, args.lang, token=os.environ["HF_TOKEN"], trust_remote_code=True) 
-    if args.dataset_name == "cv9": 
-        ds = load_dataset(args.load_script, args.lang, token=os.environ["HF_TOKEN"], trust_remote_code=True) 
-    if args.dataset_name == "ihm": 
-        ds = load_dataset(args.load_script, 'ihm', trust_remote_code=True) 
-    if args.dataset_name == "sdm": 
-        ds = load_dataset(args.load_script, 'sdm', trust_remote_code=True) 
-    if args.dataset_name == "libri":
-        ds = load_dataset(args.load_script, trust_remote_code=True) 
-    if args.dataset_name == "ted":
-        ds = load_dataset(args.load_script, trust_remote_code=True) 
-    if args.dataset_name == "fleur":
-        ds = load_dataset(args.load_script, trust_remote_code=True) 
-    if args.dataset_name == "vox":
-        ds = load_dataset(args.load_script, trust_remote_code=True) 
-
-    logger.info(ds.info.description)
+    dataLoader = DataLoader()
+    ds = dataLoader.load(dataset_name=args.dataset_name, load_script=args.load_script, lang=args.lang, split=args.split)
     dataset_reformer = MyReformer()
-    ds = dataset_reformer(ds)
+    ds = dataset_reformer.process_dataset(ds, name=args.dataset_name)
+    logger.info(ds.info.description)
     logger.info(ds)
     
     transcriptions=[]
