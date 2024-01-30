@@ -6,7 +6,9 @@ class MyReformer:
     def __init__(self): 
         self.logger = self.setup_logger()
         self.dataset_cols = {
-            "covost2": {},
+            "covost2": {
+                "remove_cols":  ['client_id', 'file', 'translation', 'id'],
+                "remain_cols": ['sentence','audio']},
             "cv5":{
                 "remove_cols":  ['client_id', 'path', 'up_votes', 'down_votes', 'age', 'gender', 'accent', 'locale', 'segment'],
                 "remain_cols": ['sentence','audio']},
