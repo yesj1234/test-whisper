@@ -5,9 +5,9 @@
 # export HF_TOKEN='' 
 export WHISPERX_TEST=/home/ubuntu/test_whisper/whisperx.test.py 
 export MODEL=large-v2
-export LOAD_SCRIPT_BASE=/home/ubuntu/test_whisper/load_scripts/korean
-export LANG=ko
-export LANGUAGE=korean
+export LOAD_SCRIPT_BASE=/home/ubuntu/test_whisper/load_scripts/japanese
+export LANG=ja
+export LANGUAGE=japanese
 export METRIC=cer
 
 # covost2. 
