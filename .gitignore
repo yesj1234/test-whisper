@@ -1,4 +1,4 @@
-*.txt
+# *.txt
 # *.ipynb
 *.pyc
 .ipynb_checkpoints/

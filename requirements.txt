@@ -1,0 +1,8 @@
+datasets
+transformers
+evaluate
+jiwer
+soundfile
+torch
+torchaudio
+torchvision
