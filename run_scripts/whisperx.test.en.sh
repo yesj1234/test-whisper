@@ -3,10 +3,10 @@
 
 # get the huggingface token from huggingface.co
 # export HF_TOKEN='' 
-
+export WHISPERX_TEST=/home/ubuntu/test_whisper/whisperx.test.py 
 #libry 
-# python3 whisperx.test.py \
-# --model openai/whisper-large-v2 \
+# python3 $WHISPERX_TEST \
+# --model large-v2 \
 # --lang en \
 # --language english \
 # --load_script /home/ubuntu/test_whisper/load_scripts/english/my_libri.py \
@@ -15,8 +15,8 @@
 # --split test.clean
 
 #cv5
-# python3 whisperx.test.py \
-# --model openai/whisper-large-v2 \
+# python3 $WHISPERX_TEST \
+# --model large-v2 \
 # --lang en \
 # --language english \
 # --load_script /home/ubuntu/test_whisper/load_scripts/english/my_cv5.py \
@@ -24,8 +24,8 @@
 # --metric wer 
 
 #cv9
-# python3 whisperx.test.py \
-# --model openai/whisper-large-v2 \
+# python3 $WHISPERX_TEST \
+# --model large-v2 \
 # --lang en \
 # --language english \
 # --load_script /home/ubuntu/test_whisper/load_scripts/english/my_cv9.py \
@@ -33,8 +33,8 @@
 # --metric wer 
 
 #ihm
-# python3 whisperx.test.py \
-# --model openai/whisper-large-v2 \
+# python3 $WHISPERX_TEST \
+# --model large-v2 \
 # --lang en \
 # --language english \
 # --load_script /home/ubuntu/test_whisper/load_scripts/english/my_ihm.py \
@@ -42,8 +42,8 @@
 # --metric wer 
 
 #sdm
-# python3 whisperx.test.py \
-# --model openai/whisper-large-v2 \
+# python3 $WHISPERX_TEST \
+# --model large-v2 \
 # --lang en \
 # --language english \
 # --load_script /home/ubuntu/test_whisper/load_scripts/english/my_sdm.py \
@@ -51,8 +51,8 @@
 # --metric wer 
 
 # #ted
-# python3 whisperx.test.py \
-# --model openai/whisper-large-v2 \
+# python3 $WHISPERX_TEST \
+# --model large-v2 \
 # --lang en \
 # --language english \
 # --load_script /home/ubuntu/test_whisper/load_scripts/english/my_ted.py \
@@ -60,8 +60,8 @@
 # --metric wer 
 
 #fleurs 
-# python3 whisperx.test.py \
-# --model openai/whisper-large-v2 \
+# python3 $WHISPERX_TEST \
+# --model large-v2 \
 # --lang en_us \
 # --language english \
 # --load_script google/fleurs \
@@ -70,8 +70,8 @@
 # --split test 
 
 # vox
-# python3 whisperx.test.py \
-# --model openai/whisper-large-v2 \
+# python3 $WHISPERX_TEST \
+# --model large-v2 \
 # --lang en \
 # --language english \
 # --load_script /home/ubuntu/test_whisper/load_scripts/english/my_vox.py \
@@ -80,8 +80,8 @@
 # --split test 
 
 # covost2. 
-python3 whisperx.test.py \
---model openai/whisper-large-v2 \
+python3 $WHISPERX_TEST \
+--model large-v2 \
 --lang en \
 --language english \
 --load_script /home/ubuntu/test_whisper/load_scripts/english/my_covost2.py \
