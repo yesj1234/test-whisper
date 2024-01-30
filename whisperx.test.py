@@ -1,5 +1,6 @@
 import whisperx 
 from datasets import load_dataset, Dataset 
+from utils.dataset_reformer import MyReformer
 import torch
 import evaluate
 import re
@@ -22,7 +23,7 @@ logging.basicConfig(
 if __name__ == "__main__":
     import argparse 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", help="repo/model_name, [openai/whisper-large-v2, openai/whisper-large-v3]", default="openai/whisper-large-v2")
+    parser.add_argument("--model", help="large-v2 / large-v3", default="large-v2")
     parser.add_argument("--language", help="english, korean, chinese, japanese")
     parser.add_argument("--load_script", help="repo/dataset_name")
     parser.add_argument("--dataset_name", help="one of [cv5, cv9, ihm, sdm, libri, ted, fleur, vox, covost2]")
@@ -35,9 +36,9 @@ if __name__ == "__main__":
     # 1. get the model and processor and initialize MyWhisper 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     BATCH_SIZE = 1
-    COMPUTE_TYPE = "float16" # change to "int8" if low on GPU mem (may reduce accuracy)
+    COMPUTE_TYPE = "float16" if DEVICE=="cuda" else "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
     LANGUAGE = args.lang
-    model = whisperx.load_model("large-v2", DEVICE, language=LANGUAGE,compute_type=compute_type)
+    model = whisperx.load_model(args.model, DEVICE, language=LANGUAGE,compute_type=COMPUTE_TYPE)
 
     
     # 2. load the dataset
@@ -45,6 +46,7 @@ if __name__ == "__main__":
     dataLoader = DataLoader()
     ds = dataLoader.load(dataset_name=args.dataset_name, load_script=args.load_script, lang=args.lang, split=args.split, data_dir=args.data_dir)
     dataset_reformer = MyReformer()
+    ds = dataset_reformer(ds, name=args.dataset_name)
     assert isinstance(ds, Dataset) == True, "ds is not a instance of class datasets.Dataset"
     logger.info(ds.info.description)
     logger.info(ds)
@@ -58,10 +60,10 @@ if __name__ == "__main__":
 
     # 3. generate predictions and make some post processing. 
     predictions = []
-    for path, transcription in zip(paths, transcriptions):
+    for path, transcription in tqdm(zip(paths, transcriptions), total=len(paths),desc="Running Prediction", ncols=100, ascii=' =', leave=True):
         audio = whisperx.load_audio(path)
         result = model.transcribe(audio, batch_size=BATCH_SIZE)
-        predictions.append(result[0]["text"])
+        predictions.append(result['segments'][0]["text"])
         
     if args.language == "english":
         normalizer = EnglishTextNormalizer()
