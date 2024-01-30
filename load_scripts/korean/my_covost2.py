@@ -39,24 +39,9 @@ _DESCRIPTION = """
 CoVoST 2, a large-scale multilingual speech translation corpus covering translations from 21 languages into English \
 and from English into 15 languages. The dataset is created using Mozilla’s open source Common Voice database of \
 crowdsourced voice recordings.
-Note that in order to limit the required storage for preparing this dataset, the audio
-is stored in the .mp3 format and is not converted to a float32 array. To convert, the audio
-file to a float32 array, please make use of the `.map()` function as follows:
 """
 
 _HOMEPAGE = "https://github.com/facebookresearch/covost"
-
-
-
-def _get_builder_configs():
-    builder_configs = [
-        datasets.BuilderConfig(name=f"en_{lang}", version=datasets.Version(_VERSION)) for lang in EN_XX_LANGUAGES
-    ]
-
-    builder_configs += [
-        datasets.BuilderConfig(name=f"{lang}_en", version=datasets.Version(_VERSION)) for lang in XX_EN_LANGUAGES
-    ]
-    return builder_configs
 
 
 class Covost2(datasets.GeneratorBasedBuilder):
@@ -80,8 +65,6 @@ class Covost2(datasets.GeneratorBasedBuilder):
 
     def _split_generators(self, dl_manager):
         data_root = os.path.abspath(os.path.expanduser(dl_manager.manual_dir))
-
-
         cv_tsv_path = os.path.join(data_root, "validated.tsv")
 
         return [
@@ -97,7 +80,8 @@ class Covost2(datasets.GeneratorBasedBuilder):
 
     def _generate_examples(self, source_path, cv_tsv_path, split):
         df = self._load_df_from_tsv(cv_tsv_path)
-
+        
+        
         for i, row in df.iterrows():
             yield i, {
                 "id": row["path"].replace(".mp3", ""),
