@@ -39,9 +39,6 @@ _DESCRIPTION = """
 CoVoST 2, a large-scale multilingual speech translation corpus covering translations from 21 languages into English \
 and from English into 15 languages. The dataset is created using Mozilla’s open source Common Voice database of \
 crowdsourced voice recordings.
-Note that in order to limit the required storage for preparing this dataset, the audio
-is stored in the .mp3 format and is not converted to a float32 array. To convert, the audio
-file to a float32 array, please make use of the `.map()` function as follows:
 """
 
 _HOMEPAGE = "https://github.com/facebookresearch/covost"

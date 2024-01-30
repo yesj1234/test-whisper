@@ -14,7 +14,7 @@ from normalizers.basic import BasicTextNormalizer
 logger = logging.getLogger("WhisperLogger")
 logging.basicConfig(
     level=logging.INFO,
-    format = "%(asctime)s|%(levelname)s|%(message)s",
+    format = "%(asctime)s|[%(levelname)s]|[%(name)s]|%(message)s",
     datefmt="%d/%b/%Y %H:%M:%S",
     stream= sys.stdout
 )
