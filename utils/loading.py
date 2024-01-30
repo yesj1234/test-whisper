@@ -26,6 +26,7 @@ class DataLoader:
         if dataset_name == "vox":
             return load_dataset(load_script, lang, trust_remote_code = True)
         if dataset_name == "covost2":
-            return load_dataset(load_script, "en_ja", split=split, data_dir="/home/ubuntu/covost", trust_remote_code=True)
+            data_dir = kwargs.pop("data_dir", "")
+            return load_dataset(load_script, lang, split=split, data_dir=data_dir, trust_remote_code=True)
         
     
