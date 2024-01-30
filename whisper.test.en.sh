@@ -70,12 +70,12 @@
 # --split test 
 
 #vox
-python3 whisper.test.py \
---model openai/whisper-large-v2 \
---lang en \
---language english \
---load_script ./load_scripts/my_vox.py \
---dataset_name vox \
---metric wer \
---split test 
+# python3 whisper.test.py \
+# --model openai/whisper-large-v2 \
+# --lang en \
+# --language english \
+# --load_script ./load_scripts/my_vox.py \
+# --dataset_name vox \
+# --metric wer \
+# --split test 
 
