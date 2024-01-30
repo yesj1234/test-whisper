@@ -79,12 +79,13 @@
 # --metric wer \
 # --split test 
 
-# covost2. # lang config name for covost2 is like source_target for example, en_ja or en_zh-CN. for audio transcription they are all the same. 
+# covost2. 
 python3 whisper.test.py \
 --model openai/whisper-large-v2 \
---lang en_ja \
+--lang en \
 --language english \
 --load_script /home/ubuntu/test_whisper/load_scripts/english/my_covost2.py \
 --dataset_name covost2 \
 --metric wer \
---split test 
+--split test \
+--data_dir /home/ubuntu/covost/

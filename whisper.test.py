@@ -52,10 +52,11 @@ if __name__ == "__main__":
     parser.add_argument("--model", help="repo/model_name, [openai/whisper-large-v2, openai/whisper-large-v3]", default="openai/whisper-large-v2")
     parser.add_argument("--language", help="english, korean, chinese, japanese")
     parser.add_argument("--load_script", help="repo/dataset_name")
-    parser.add_argument("--dataset_name", help="one of [cv5, cv9, ihm, sdm, libri, ted, fleur, vox]")
+    parser.add_argument("--dataset_name", help="one of [cv5, cv9, ihm, sdm, libri, ted, fleur, vox, covost2]")
     parser.add_argument("--lang", help="usually pick one of the following [en ko ja zh-CN]. \n For fleur pick one of [cmn, en_us, ja_jp, ko_kr, yue]")
     parser.add_argument("--metric", help="wer for english / cer for korean, japanese, chinese")
     parser.add_argument("--split", help="Usually one of [test, validation, train]. Libri[test.other, test.clean]")
+    parser.add_argument("--data_dir", help="required for using covost2 since it requires the manual download of the data")
     args = parser.parse_args()
     
     # 1. get the model and processor and initialize MyWhisper 
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     # 2. load the dataset
     # multi language support: fleurs, vox, cv9, covost2(later work)
     dataLoader = DataLoader()
-    ds = dataLoader.load(dataset_name=args.dataset_name, load_script=args.load_script, lang=args.lang, split=args.split)
+    ds = dataLoader.load(dataset_name=args.dataset_name, load_script=args.load_script, lang=args.lang, split=args.split, data_dir=args.data_dir)
     dataset_reformer = MyReformer()
     ds = dataset_reformer(ds, name=args.dataset_name)
     logger.info(ds.info.description)
