@@ -62,7 +62,7 @@ python3 $WHISPERX_TEST \
 #fleurs 
 python3 $WHISPERX_TEST \
 --model large-v2 \
---lang en_us \
+--lang en \
 --language english \
 --load_script google/fleurs \
 --dataset_name fleurs \

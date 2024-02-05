@@ -4,7 +4,7 @@
 # get the huggingface token from huggingface.co
 # export HF_TOKEN='' 
 export WHISPER_TEST=/home/ubuntu/test_whisper/whisper.test.py 
-export MODEL=openai/whisper-large-v2
+export MODEL=openai/whisper-large-v3
 export LOAD_SCRIPT_BASE=/home/ubuntu/test_whisper/load_scripts/english
 export LANG=en
 export LANGUAGE=english
@@ -17,7 +17,7 @@ python3 $WHISPER_TEST \
 --load_script $LOAD_SCRIPT_BASE/my_libri.py \
 --dataset_name libri \
 --metric $METRIC \
---split test.clean
+--split test.clean 
 
 #cv5
 python3 $WHISPER_TEST \
@@ -93,4 +93,4 @@ python3 $WHISPER_TEST \
 --dataset_name covost2 \
 --metric $METRIC \
 --split test \
---data_dir /home/ubuntu/covost/
+--data_dir /home/ubuntu/covost_en/en/en/
