@@ -8,6 +8,7 @@ from tqdm import tqdm
 import logging
 import sys
 import os
+import numpy as np 
 from utils.loading import DataLoader
 from normalizers.english import EnglishTextNormalizer
 from normalizers.basic import BasicTextNormalizer
@@ -34,17 +35,14 @@ class MyWhisper:
         return transcription
             
         
-    def main(self, **kwargs): 
-        audio_arraies = kwargs.pop("audio_arraies", [])
-        if not audio_arraies:
-            raise ValueError("audio arraies are empty")
+    def __call__(self, **kwargs): 
+        audio = kwargs.pop("audios", [])
+        assert len(audio) != 0, "audios should not be a empty list"
         predictions = []
-        for array in tqdm(audio_arraies, desc="Running Prediction"):
-            input_features = self.processor(array, sampling_rate = 16_000, return_tensors="pt").input_features.to(self.device)
-            prediction = self.predict_transcription(input_features)
-            predictions.append(prediction)
+        for audio in tqdm(audios, ascii=" =", leave=True, position=0, desc="Running prediction"):
+            input_features = self.processor(audio, sampling_rate = 16_000, return_tensors="pt").input_features.to(self.device)
+            predictions += self.predict_transcription(input_features)
         return predictions
-
     
 if __name__ == "__main__":
     import argparse 
@@ -55,8 +53,9 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_name", help="one of [cv5, cv9, ihm, sdm, libri, ted, fleur, vox, covost2]")
     parser.add_argument("--lang", help="usually pick one of the following [en ko ja zh-CN]. \n For fleur pick one of [cmn, en_us, ja_jp, ko_kr, yue]")
     parser.add_argument("--metric", help="wer for english / cer for korean, japanese, chinese")
-    parser.add_argument("--split", help="Usually one of [test, validation, train]. Libri[test.other, test.clean]")
+    parser.add_argument("--split", help="Usually one of [test, validation, train]. Libri[test.other, test.clean]", default="test")
     parser.add_argument("--data_dir", help="required for using covost2 since it requires the manual download of the data")
+    parser.add_argument("--max_size", help="max size of the input datset. Set this for large datasets to reduce the runtime.", type=int, default=100000)
     args = parser.parse_args()
     
     # 1. get the model and processor and initialize MyWhisper 
@@ -74,15 +73,19 @@ if __name__ == "__main__":
     logger.info(ds.info.description)
     logger.info(ds)
     
+    
+    #3. generate predictions
+    count = 0
+    total = len(ds) if len(ds) <= args.max_size else args.max_size
     transcriptions=[]
-    audio_arraies=[]    
-
-    for sample in ds:
+    audios = []    
+    for sample in tqdm(ds, total=total, desc="moving data", ascii=" =", leave=True,position=0):
         transcriptions.append(sample["transcription"])
-        audio_arraies.append(sample["audio"]["array"])
-
-    # 3. generate predictions and make some post processing. 
-    predictions = whisperer.main(transcriptions=transcriptions, audio_arraies=audio_arraies)
+        audios.append(sample["audio"]["array"])
+        count += 1
+        if count >= total:
+            break 
+    predictions = whisperer(audios=audios)
     if args.language == "english":
         normalizer = EnglishTextNormalizer()
     if args.language in ["japanese", "chinese"]:
@@ -95,7 +98,6 @@ if __name__ == "__main__":
         return x 
     
     
-    predictions = list(map(lambda x: x[0], predictions))
     predictions = list(map(post_processing, predictions))
     transcriptions = list(map(post_processing, transcriptions))
     
