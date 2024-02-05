@@ -1,4 +1,5 @@
-import whisperx 
+import whisperx
+import numpy as np 
 from datasets import load_dataset, Dataset 
 from utils.dataset_reformer import MyReformer
 import torch
@@ -35,6 +36,7 @@ if __name__ == "__main__":
     
     # 1. get the model and processor and initialize MyWhisper 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    logger.info(f"DEVICE: {DEVICE}")
     BATCH_SIZE = 1
     COMPUTE_TYPE = "float16" if DEVICE=="cuda" else "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
     LANGUAGE = args.lang
@@ -51,20 +53,32 @@ if __name__ == "__main__":
     logger.info(ds.info.description)
     logger.info(ds)
     
-    transcriptions=[] # references 
-    paths=[] # audio file path will be here  
+    # transcriptions=[] # references 
+    # paths=[] # audio file path will be here  
 
-    for sample in ds:
-        transcriptions.append(sample["transcription"])
-        paths.append(sample["audio"]["path"])
+    # for sample in ds:
+    #     transcriptions.append(sample["transcription"])
+    #     paths.append(sample["audio"]["path"])
 
     # 3. generate predictions and make some post processing. 
-    predictions = []
-    for path, transcription in tqdm(zip(paths, transcriptions), total=len(paths),desc="Running Prediction", ncols=100, ascii=' =', leave=True):
-        audio = whisperx.load_audio(path)
-        result = model.transcribe(audio, batch_size=BATCH_SIZE)
-        predictions.append(result['segments'][0]["text"])
+    # predictions = []
+    # for path, transcription in tqdm(zip(paths, transcriptions), total=len(paths),desc="Running Prediction", ncols=100, ascii=' =', leave=True):
+    #     audio = whisperx.load_audio(path)
+    #     result = model.transcribe(audio, batch_size=BATCH_SIZE)
+    #     predictions.append(result['segments'][0]["text"])
         
+    predictions = []
+    transcriptions = []
+    for data in tqdm(ds, total=len(ds), ascii=" =", leave=True, position=0, desc="Running Prediction"):
+        transcriptions.append(data['transcription'])
+        arr = data['audio']['array'].astype(np.float32) # convert from float64 to float32 since torch.from_numpy function is used internally in whisperx
+        try:
+            result = model.transcribe(arr, batch_size=BATCH_SIZE)
+            predictions.append(result['segments'][0]['text'])
+        except Exception as e:
+            print(e)
+            continue # to the next data
+
     if args.language == "english":
         normalizer = EnglishTextNormalizer()
     if args.language in ["japanese", "chinese"]:
@@ -77,7 +91,6 @@ if __name__ == "__main__":
         return x 
     
     
-    predictions = list(map(lambda x: x[0], predictions))
     predictions = list(map(post_processing, predictions))
     transcriptions = list(map(post_processing, transcriptions))
     
