@@ -59,9 +59,9 @@ class MyReformer:
         if name not in [*self.dataset_cols.keys()]:
             raise ValueError(f"{name} not registered in the processor class.")
         
-        cols_to_remove = self.dataset_cols[name]["remove_cols"]
+        # cols_to_remove = self.dataset_cols[name]["remove_cols"]
         remain_cols = self.dataset_cols[name]["remain_cols"]
-        dataset = dataset.remove_columns(cols_to_remove)
+        # dataset = dataset.remove_columns(cols_to_remove)
         if remain_cols[0] != "transcription":
             dataset = dataset.rename_column(remain_cols[0], "transcription")
                 
