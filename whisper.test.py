@@ -68,20 +68,29 @@ if __name__ == "__main__":
     logger.info(ds.info.description)
     logger.info(ds)
     TOTAL = len(ds) if len(ds) <= args.max_size else args.max_size
-    DF_KEYS = list(filter(lambda x: x != "audio", ds.column_names)) + ['path', 'model_prediction', 'score']
+    if 'path' not in ds.column_names:    
+        DF_KEYS = list(filter(lambda x: x != "audio", ds.column_names)) + ['path', 'model_prediction', 'score']
+    else: 
+        DF_KEYS = list(filter(lambda x: x != "audio", ds.column_names)) + ['model_prediction', 'score']
+        
     df = pd.DataFrame(columns=DF_KEYS)
     
     #3. generate predictions
     count = 0
-    for sample in tqdm(ds, total=TOTAL, desc="moving data", ascii=" =", leave=True,position=0):
+    for sample in tqdm(ds, total=TOTAL, desc="generating prediction", ascii=" =", leave=True,position=0):
         count += 1
         if count > TOTAL:
             break 
-        input_features = processor(sample['audio']['array'], sampling_rate = 16_000, return_tensors="pt").input_features.to(device)
-        predicted_ids = model.generate(input_features)
-        transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-        transcription = normalizer(transcription[0])
-        sample['path'] = sample['audio']['path']
+        try:
+            input_features = processor(sample['audio']['array'], sampling_rate = 16_000, return_tensors="pt").input_features.to(device)
+            predicted_ids = model.generate(input_features)
+            transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
+            transcription = normalizer(transcription[0])
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
+            
+        if not sample.get('path'):
+            sample['path'] = sample['audio']['path']
         del sample['audio']
         sample['model_prediction'] = transcription
         try:
@@ -89,7 +98,7 @@ if __name__ == "__main__":
             sample['score'] = round(score, 6)
         except Exception as e:
             sample['score'] = None
-            traceback.print_tb(e.__traceback__, limit=4)
+            traceback.print_tb(e.__traceback__)
         temp = pd.DataFrame([sample])
         df = pd.concat([df, temp])    
     
