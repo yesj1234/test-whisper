@@ -1,5 +1,6 @@
 import whisperx
 import numpy as np 
+import pandas as pd
 from datasets import load_dataset, Dataset 
 from utils.dataset_reformer import MyReformer
 import torch
@@ -9,6 +10,8 @@ from tqdm import tqdm
 import logging
 import sys
 import os
+import traceback
+from pprint import pformat 
 from utils.loading import DataLoader
 from normalizers.english import EnglishTextNormalizer
 from normalizers.basic import BasicTextNormalizer
@@ -32,17 +35,28 @@ if __name__ == "__main__":
     parser.add_argument("--metric", help="wer for english / cer for korean, japanese, chinese")
     parser.add_argument("--split", help="Usually one of [test, validation, train]. Libri[test.other, test.clean]")
     parser.add_argument("--data_dir", help="required for using covost2 since it requires the manual download of the data")
+    parser.add_argument("--max_size", help="max size of the dataset to predict", default=20000, type=int)
     args = parser.parse_args()
     
+    logger.info(f"""
+                ***** Simple Summary of the args used *****
+{pformat(vars(args))}
+                """)
     # 1. get the model and processor and initialize MyWhisper 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    logger.info(f"DEVICE: {DEVICE}")
     BATCH_SIZE = 1
     COMPUTE_TYPE = "float16" if DEVICE=="cuda" else "int8" # change to "int8" if low on GPU mem (may reduce accuracy)
     LANGUAGE = args.lang
     model = whisperx.load_model(args.model, DEVICE, language=LANGUAGE,compute_type=COMPUTE_TYPE)
+    metric = evaluate.load(args.metric)
 
-    
+    if args.language == "english":
+        normalizer = EnglishTextNormalizer()
+    if args.language in ["japanese", "chinese"]:
+        normalizer = BasicTextNormalizer(split_letters=True)
+    if args.language == "korean":
+        normalizer = BasicTextNormalizer()
+        
     # 2. load the dataset
     # multi language support: covost2(later work)
     dataLoader = DataLoader()
@@ -52,67 +66,43 @@ if __name__ == "__main__":
     assert isinstance(ds, Dataset) == True, "ds is not a instance of class datasets.Dataset"
     logger.info(ds.info.description)
     logger.info(ds)
-    
-    # transcriptions=[] # references 
-    # paths=[] # audio file path will be here  
-
-    # for sample in ds:
-    #     transcriptions.append(sample["transcription"])
-    #     paths.append(sample["audio"]["path"])
-
-    # 3. generate predictions and make some post processing. 
-    # predictions = []
-    # for path, transcription in tqdm(zip(paths, transcriptions), total=len(paths),desc="Running Prediction", ncols=100, ascii=' =', leave=True):
-    #     audio = whisperx.load_audio(path)
-    #     result = model.transcribe(audio, batch_size=BATCH_SIZE)
-    #     predictions.append(result['segments'][0]["text"])
+    TOTAL = len(ds) if len(ds) <= args.max_size else args.max_size
+    if 'path' not in ds.column_names:    
+        DF_KEYS = list(filter(lambda x: x != "audio", ds.column_names)) + ['path', 'model_prediction', 'score']
+    else: 
+        DF_KEYS = list(filter(lambda x: x != "audio", ds.column_names)) + ['model_prediction', 'score']
         
-    predictions = []
-    transcriptions = []
-    for data in tqdm(ds, total=len(ds), ascii=" =", leave=True, position=0, desc="Running Prediction"):
-        transcriptions.append(data['transcription'])
-        arr = data['audio']['array'].astype(np.float32) # convert from float64 to float32 since torch.from_numpy function is used internally in whisperx
+    df = pd.DataFrame(columns=DF_KEYS)
+    count = 0
+    for data in tqdm(ds, total=TOTAL, ascii=" =", leave=True, position=0, desc="Running Prediction"):
+        count += 1
+        if count > TOTAL:
+            break 
+        if not data.get('path'):
+            data['path'] = data['audio']['path']
+        model_prediction = ""
         try:
+            arr = data['audio']['array'].astype(np.float32) # convert from float64 to float32 since torch.from_numpy function is used internally in whisperx
             result = model.transcribe(arr, batch_size=BATCH_SIZE)
-            predictions.append(result['segments'][0]['text'])
+            model_prediction = normalizer(result['segments'][0]['text'])
+            data['model_prediction'] = model_prediction
         except Exception as e:
-            print(e)
-            continue # to the next data
-
-    if args.language == "english":
-        normalizer = EnglishTextNormalizer()
-    if args.language in ["japanese", "chinese"]:
-        normalizer = BasicTextNormalizer(split_letters=True)
-    if args.language == "korean":
-        normalizer = BasicTextNormalizer()
+            data['model_prediction'] = None
+            traceback.print_tb(e.__traceback__)
+            pass 
+        
+        try: 
+            score = metric.compute(predictions=[model_prediction], references=[normalizer(data['transcription'])])
+            data['score'] = round(score, 6)
+        except Exception as e:
+            data['score'] = None
+            traceback.print_tb(e.__traceback__)
+            pass
+        del data['audio']
+        temp = pd.DataFrame([data])
+        df = df.reset_index(drop=True)
+        df = pd.concat([df, temp], ignore_index=True)
     
-    def post_processing(x):
-        x = normalizer(x)
-        return x 
-    
-    
-    predictions = list(map(post_processing, predictions))
-    transcriptions = list(map(post_processing, transcriptions))
-    
-    # 4. load the metric to compute and write loggings.
-    metric = evaluate.load(args.metric)
-    score_file_name = f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}_{args.language}scores.txt"
-    with open(score_file_name, mode="w", encoding="utf-8") as f:
-        for ref, pred in zip(transcriptions, predictions):
-            try:
-                score = metric.compute(predictions=[pred], references=[ref])
-                f.write(f"{pred} :: {ref} :: {round(score, 6)}\n")
-            except Exception as e:
-                print(e)
-                continue
-
-    
-    with open(score_file_name, mode="r", encoding="utf-8") as g, open("model_dataset_scores.txt", mode="a+", encoding="utf-8") as h:
-        lines = g.readlines()
-        total = 0
-        for line in lines:
-            ref, pred, score = line.split(" :: ")
-            score = float(score[:-2])
-            total += score
-        logger.info(f"average score: {total / int(len(lines))}")
-        h.write(f"{args.model} | {args.dataset_name} | {total/int(len(lines))}\n")
+    DF_FILENAME = f'{args.model.replace("/", "_")}_{args.dataset_name.replace("/", "_")}.csv'
+    df.reset_index(drop=True)
+    df.to_csv(DF_FILENAME)
