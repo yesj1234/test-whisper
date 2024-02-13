@@ -8,10 +8,14 @@ from tqdm import tqdm
 import logging
 import sys
 import os
-import numpy as np 
+import traceback
+import numpy as np
+import pandas as pd 
+from pprint import pformat
 from utils.loading import DataLoader
 from normalizers.english import EnglishTextNormalizer
 from normalizers.basic import BasicTextNormalizer
+
 logger = logging.getLogger("WhisperLogger")
 logging.basicConfig(
     level=logging.INFO,
@@ -22,28 +26,6 @@ logging.basicConfig(
 # LANGUAGES: en(english), zh(chinese), ko(korean), ja(japanese) 
 
 
-class MyWhisper:
-    def __init__(self, processor, model, *args):
-        # init model and processor for conditional generation 
-        self.processor = processor 
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = model.to(self.device)
-        
-    def predict_transcription(self, input_features):
-        predicted_ids = self.model.generate(input_features)
-        transcription = self.processor.batch_decode(predicted_ids, skip_special_tokens=True)
-        return transcription
-            
-        
-    def __call__(self, **kwargs): 
-        audio = kwargs.pop("audios", [])
-        assert len(audio) != 0, "audios should not be a empty list"
-        predictions = []
-        for audio in tqdm(audios, ascii=" =", leave=True, position=0, desc="Running prediction"):
-            input_features = self.processor(audio, sampling_rate = 16_000, return_tensors="pt").input_features.to(self.device)
-            predictions += self.predict_transcription(input_features)
-        return predictions
-    
 if __name__ == "__main__":
     import argparse 
     parser = argparse.ArgumentParser()
@@ -58,12 +40,25 @@ if __name__ == "__main__":
     parser.add_argument("--max_size", help="max size of the input datset. Set this for large datasets to reduce the runtime.", type=int, default=100000)
     args = parser.parse_args()
     
-    # 1. get the model and processor and initialize MyWhisper 
-    processor = WhisperProcessor.from_pretrained(args.model)
-    model = WhisperForConditionalGeneration.from_pretrained(args.model)
-    model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(language=args.language, task="transcribe")
-    whisperer = MyWhisper(processor=processor, model=model)
+    logger.info(f"""
+                ***** Simple Summary of the args used *****
+{pformat(vars(args))}
+                """)
     
+    # 1. get the model and processor and metric. 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    processor = WhisperProcessor.from_pretrained(args.model)
+    model = WhisperForConditionalGeneration.from_pretrained(args.model).to(device)
+    model.config.forced_decoder_ids = processor.get_decoder_prompt_ids(language=args.language, task="transcribe")
+    metric = evaluate.load(args.metric)
+    
+    if args.language == "english":
+        normalizer = EnglishTextNormalizer()
+    if args.language in ["japanese", "chinese"]:
+        normalizer = BasicTextNormalizer(split_letters=True)
+    if args.language == "korean":
+        normalizer = BasicTextNormalizer()
+        
     # 2. load the dataset
     # multi language support: fleurs, vox, cv9, covost2(later work)
     dataLoader = DataLoader()
@@ -72,54 +67,33 @@ if __name__ == "__main__":
     ds = dataset_reformer(ds, name=args.dataset_name)
     logger.info(ds.info.description)
     logger.info(ds)
-    
+    TOTAL = len(ds) if len(ds) <= args.max_size else args.max_size
+    DF_KEYS = list(filter(lambda x: x != "audio", ds.column_names)) + ['path', 'model_prediction', 'score']
+    df = pd.DataFrame(columns=DF_KEYS)
     
     #3. generate predictions
     count = 0
-    total = len(ds) if len(ds) <= args.max_size else args.max_size
-    transcriptions=[]
-    audios = []    
-    for sample in tqdm(ds, total=total, desc="moving data", ascii=" =", leave=True,position=0):
-        transcriptions.append(sample["transcription"])
-        audios.append(sample["audio"]["array"])
+    for sample in tqdm(ds, total=TOTAL, desc="moving data", ascii=" =", leave=True,position=0):
         count += 1
-        if count >= total:
+        if count > TOTAL:
             break 
-    predictions = whisperer(audios=audios)
-    if args.language == "english":
-        normalizer = EnglishTextNormalizer()
-    if args.language in ["japanese", "chinese"]:
-        normalizer = BasicTextNormalizer(split_letters=True)
-    if args.language == "korean":
-        normalizer = BasicTextNormalizer()
+        input_features = processor(sample['audio']['array'], sampling_rate = 16_000, return_tensors="pt").input_features.to(device)
+        predicted_ids = model.generate(input_features)
+        transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
+        transcription = normalizer(transcription[0])
+        sample['path'] = sample['audio']['path']
+        del sample['audio']
+        sample['model_prediction'] = transcription
+        try:
+            score = metric.compute(predictions=[transcription], references=[normalizer(sample['transcription'])])
+            sample['score'] = round(score, 6)
+        except Exception as e:
+            sample['score'] = None
+            traceback.print_tb(e.__traceback__, limit=4)
+        temp = pd.DataFrame([sample])
+        df = pd.concat([df, temp])    
     
-    def post_processing(x):
-        x = normalizer(x)
-        return x 
-    
-    
-    predictions = list(map(post_processing, predictions))
-    transcriptions = list(map(post_processing, transcriptions))
-    
-    # 4. load the metric to compute and write loggings.
-    metric = evaluate.load(args.metric)
-    score_file_name = f"./{args.dataset_name.replace('/', '_')}_{args.model.replace('/','_')}_{args.language}scores.txt"
-    with open(score_file_name, mode="w", encoding="utf-8") as f:
-        for ref, pred in zip(transcriptions, predictions):
-            try:
-                score = metric.compute(predictions=[pred], references=[ref])
-                f.write(f"{pred} :: {ref} :: {round(score, 6)}\n")
-            except Exception as e:
-                print(e)
-                continue
-
-    
-    with open(score_file_name, mode="r", encoding="utf-8") as g, open("model_dataset_scores.txt", mode="a+", encoding="utf-8") as h:
-        lines = g.readlines()
-        total = 0
-        for line in lines:
-            ref, pred, score = line.split(" :: ")
-            score = float(score[:-2])
-            total += score
-        logger.info(f"average score: {total / int(len(lines))}")
-        h.write(f"{args.model} | {args.dataset_name} | {total/int(len(lines))}\n")
+    #4 save the dataframe.
+    DF_FILENAME = f'{args.model.replace("/", "_")}_{args.dataset_name.replace("/", "_")}.csv'
+    df.reset_index(drop=True)
+    df.to_csv(DF_FILENAME)
